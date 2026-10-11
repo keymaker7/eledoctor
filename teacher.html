@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>엘레닥터 · 우리 반 보건실 알림</title>
+<style>
+  :root {
+    --teal: #1fa98f; --teal-dark: #15806c; --ink: #1d3a35; --sub: #5b7a73;
+    --bg: #f2f7f6; --line: #e3edea;
+    --wait: #f5a623; --care: #3f8cff; --done: #28a06c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 22px 16px 40px; }
+  h1 { font-size: 21px; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .sub { color: var(--sub); font-size: 14px; font-weight: 600; margin-bottom: 18px; }
+
+  .pick { display: flex; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+  .pick label { font-size: 14px; font-weight: 800; color: var(--sub); }
+  select { font-family: inherit; font-size: 16px; font-weight: 700; border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 12px; background: #fff; color: var(--ink); }
+
+  .summary { font-size: 15px; font-weight: 800; color: var(--teal-dark); margin-bottom: 12px; }
+  .vcard { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+  .vcard.live { border: 2px solid var(--care); }
+  .vcard .em { font-size: 30px; }
+  .vcard .who { font-weight: 800; font-size: 16px; }
+  .vcard .sym { color: var(--sub); font-size: 13px; font-weight: 600; }
+  .vcard .right { margin-left: auto; text-align: right; }
+  .vcard .time { font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .chip { display: inline-block; font-size: 12px; font-weight: 800; color: #fff; border-radius: 999px; padding: 3px 10px; }
+  .chip.waiting { background: var(--wait); } .chip.care { background: var(--care); } .chip.done { background: var(--done); }
+  .empty { color: #9ab3ac; font-weight: 600; padding: 40px 0; text-align: center; background: #fff; border: 1px dashed var(--line); border-radius: 14px; }
+  footer { margin-top: 18px; font-size: 12px; color: #9ab3ac; font-weight: 600; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📋 우리 반 보건실 알림</h1>
+  <div class="sub" id="school"></div>
+
+  <div class="pick">
+    <label>우리 반</label>
+    <select id="pGrade"></select>
+    <select id="pClass"></select>
+    <span style="font-size:13px;color:var(--sub);font-weight:600">선택하면 이 컴퓨터에 기억됩니다</span>
+  </div>
+
+  <div class="summary" id="summary"></div>
+  <div id="list"></div>
+  <footer id="mode"></footer>
+</div>
+
+<script src="config.js"></script>
+<script src="backend-config.js"></script>
+<script src="js/eddb.js"></script>
+<script>
+(function () {
+  var CFG = window.ED_CONFIG;
+  var SYM = {}; CFG.symptoms.forEach(function (s) { SYM[s.code] = s; });
+  var STATUS = { waiting: '보건실 대기 중', care: '처치 받는 중', done: '퇴실' };
+
+  document.getElementById('school').textContent = CFG.schoolName + ' · 오늘 ' + EDDB.dayString();
+  document.getElementById('mode').textContent = '저장: ' + EDDB.modeLabel + ' 모드 · 처치 상세는 보건교사 화면에서만 볼 수 있습니다';
+
+  var pGrade = document.getElementById('pGrade'), pClass = document.getElementById('pClass');
+  CFG.grades.forEach(function (g) {
+    var o = document.createElement('option'); o.value = g.grade; o.textContent = g.grade + '학년'; pGrade.appendChild(o);
+  });
+  function fillClasses() {
+    var g = +pGrade.value, n = 0;
+    CFG.grades.forEach(function (x) { if (x.grade === g) n = x.classes; });
+    pClass.innerHTML = '';
+    for (var i = 1; i <= n; i++) { var o = document.createElement('option'); o.value = i; o.textContent = i + '반'; pClass.appendChild(o); }
+  }
+
+  // 지난 선택 기억
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem('ed-teacher-class')); } catch (e) {}
+  if (saved && saved.grade) pGrade.value = saved.grade;
+  fillClasses();
+  if (saved && saved.classNo) pClass.value = saved.classNo;
+
+  pGrade.addEventListener('change', function () { fillClasses(); remember(); refresh(); });
+  pClass.addEventListener('change', function () { remember(); refresh(); });
+  function remember() { localStorage.setItem('ed-teacher-class', JSON.stringify({ grade: +pGrade.value, classNo: +pClass.value })); }
+
+  var today = EDDB.dayString();
+  function refresh() {
+    var g = +pGrade.value, c = +pClass.value;
+    EDDB.fetchDay(today).then(function (list) {
+      var mine = list.filter(function (v) { return v.grade === g && v.classNo === c; });
+      var out = document.getElementById('list'); out.innerHTML = '';
+      var inRoom = mine.filter(function (v) { return v.status !== 'done'; }).length;
+      document.getElementById('summary').textContent = mine.length
+        ? '오늘 ' + mine.length + '명 다녀감' + (inRoom ? ' · 지금 보건실에 ' + inRoom + '명 있어요' : '')
+        : '';
+      if (!mine.length) { out.innerHTML = '<div class="empty">오늘은 보건실에 간 학생이 없어요 😊</div>'; return; }
+      mine.slice().reverse().forEach(function (v) {
+        var sym = SYM[v.symptom] || { emoji: '💬', label: v.symptom };
+        var card = document.createElement('div');
+        card.className = 'vcard' + (v.status !== 'done' ? ' live' : '');
+        card.innerHTML = '<span class="em">' + sym.emoji + '</span>' +
+          '<span><span class="who">' + v.studentNo + '번' + (v.name ? ' ' + v.name : '') + '</span><br>' +
+          '<span class="sym">' + sym.label + (v.status === 'done' && v.outcome ? ' → ' + v.outcome : '') + '</span></span>' +
+          '<span class="right"><span class="chip ' + v.status + '">' + STATUS[v.status] + '</span><br>' +
+          '<span class="time">' + EDDB.timeString(v.tsIn) + (v.tsOut ? ' ~ ' + EDDB.timeString(v.tsOut) : '') + '</span></span>';
+        out.appendChild(card);
+      });
+    });
+  }
+  EDDB.subscribe(today, refresh);
+  refresh();
+})();
+</script>
+</body>
+</html>

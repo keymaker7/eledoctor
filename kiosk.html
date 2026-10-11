@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>보건실 키오스크</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #5b4a42; --sub: #a08b80; --point: #ff8fab; --point-dark: #e76a8e;
+    --card: #fffdf8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Jua", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    background: linear-gradient(160deg, #fff6e9 0%, #ffeef3 50%, #e9f6ff 100%);
+    color: var(--ink); display: flex; flex-direction: column; user-select: none; overflow: hidden;
+  }
+
+  /* 둥둥 떠다니는 장식 */
+  .deco { position: fixed; font-size: 34px; opacity: .4; pointer-events: none; animation: floaty 7s ease-in-out infinite; }
+  @keyframes floaty { 0%,100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-24px) rotate(6deg); } }
+
+  header { display: flex; align-items: center; justify-content: space-between; padding: 18px 30px 4px; }
+  header .title { font-size: 30px; letter-spacing: 0; }
+  header .title small { color: var(--sub); font-size: 16px; margin-left: 10px; }
+  header .clock { font-size: 22px; color: var(--sub); font-variant-numeric: tabular-nums; }
+
+  /* 말풍선 + 마스코트 */
+  .talk { display: flex; align-items: center; gap: 16px; padding: 10px 30px 4px; }
+  .mascot { font-size: 64px; animation: wiggle 2.4s ease-in-out infinite; }
+  @keyframes wiggle { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+  .bubble {
+    position: relative; background: #fff; border: 3px solid #ffd7e2; border-radius: 24px;
+    padding: 14px 24px; font-size: 30px; box-shadow: 0 6px 0 #ffe7ee;
+  }
+  .bubble::before {
+    content: ""; position: absolute; left: -14px; top: 50%; margin-top: -9px;
+    border: 9px solid transparent; border-right-color: #ffd7e2;
+  }
+  .crumbs { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+  .crumb {
+    background: #fff; border: 2.5px solid #ffe3b8; color: #c98a3d;
+    font-size: 18px; padding: 7px 14px; border-radius: 999px; box-shadow: 0 3px 0 #ffefd4;
+  }
+
+  main { flex: 1; display: flex; flex-direction: column; padding: 10px 30px 8px; min-height: 0; }
+  .card {
+    background: var(--card); border-radius: 34px; border: 3px solid #fff;
+    box-shadow: 0 14px 40px rgba(199,138,61,.14);
+    flex: 1; display: flex; flex-direction: column; padding: 22px 26px; min-height: 0;
+  }
+
+  .grid { display: grid; gap: 14px; flex: 1; align-content: center; overflow-y: auto; }
+  .grid.g-grade  { grid-template-columns: repeat(3, 1fr); }
+  .grid.g-class  { grid-template-columns: repeat(4, 1fr); }
+  .grid.g-number { grid-template-columns: repeat(6, 1fr); }
+  .grid.g-symptom{ grid-template-columns: repeat(4, 1fr); }
+  button.opt {
+    border: 3px solid rgba(255,255,255,.9); border-radius: 24px; cursor: pointer;
+    font-family: inherit; color: var(--ink); padding: 16px 6px; font-size: 30px;
+    transition: transform .08s; animation: pop .22s ease both;
+  }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  button.opt:active { transform: scale(.9) rotate(-2deg); }
+  /* 알록달록 파스텔 */
+  .c0 { background: #ffe3ec; box-shadow: 0 5px 0 #ffc9da; }
+  .c1 { background: #fff3c7; box-shadow: 0 5px 0 #ffe49a; }
+  .c2 { background: #dff5e3; box-shadow: 0 5px 0 #bde8c6; }
+  .c3 { background: #e0f0ff; box-shadow: 0 5px 0 #bcdcf7; }
+  .c4 { background: #f0e6ff; box-shadow: 0 5px 0 #dcc9f7; }
+  button.opt .em { display: block; font-size: 44px; margin-bottom: 4px; }
+  .g-symptom button.opt { font-size: 22px; }
+  .g-symptom button.opt .em { font-size: 52px; margin-bottom: 8px; }
+
+  /* 확인 화면 */
+  .confirm { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
+  .confirm .who { font-size: 40px; }
+  .confirm .what { font-size: 30px; color: var(--point-dark); }
+  .confirm .what .em { font-size: 48px; margin-right: 10px; vertical-align: middle; }
+  button.go {
+    font-family: inherit; border: 3px solid #fff; cursor: pointer; border-radius: 999px;
+    background: var(--point); color: #fff; font-size: 30px; padding: 18px 54px;
+    box-shadow: 0 7px 0 var(--point-dark); margin-top: 6px;
+  }
+  button.go:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--point-dark); }
+
+  /* 완료 화면 */
+  .done { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; position: relative; }
+  .done .big { font-size: 90px; animation: boing .6s ease; }
+  @keyframes boing { 0% { transform: scale(0); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+  .done h2 { font-size: 42px; }
+  .done p { font-size: 26px; color: var(--sub); }
+  .confetti { position: absolute; font-size: 30px; animation: rise 1.8s ease-out forwards; pointer-events: none; }
+  @keyframes rise { from { transform: translateY(60px) scale(.6); opacity: 0; } 30% { opacity: 1; } to { transform: translateY(-160px) scale(1.15) rotate(20deg); opacity: 0; } }
+
+  footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 30px 16px; }
+  button.back {
+    font-family: inherit; border: 3px solid #fff; cursor: pointer; border-radius: 999px;
+    background: #fff; color: var(--sub); font-size: 22px; padding: 10px 26px;
+    box-shadow: 0 4px 0 #eadfd4; visibility: hidden;
+  }
+  button.back:active { transform: translateY(3px); box-shadow: 0 1px 0 #eadfd4; }
+  footer .mode { font-size: 13px; color: #cbb9ab; }
+</style>
+</head>
+<body>
+  <span class="deco" style="left:4%;  top:62%;">🩹</span>
+  <span class="deco" style="left:12%; top:20%; animation-delay:-2s;">🌼</span>
+  <span class="deco" style="right:6%; top:30%; animation-delay:-4s;">💖</span>
+  <span class="deco" style="right:13%; top:72%; animation-delay:-1s;">⭐</span>
+
+  <header>
+    <div class="title">🏥 보건실<small id="school"></small></div>
+    <div class="clock" id="clock"></div>
+  </header>
+
+  <div class="talk">
+    <div class="mascot" id="mascot">🧸</div>
+    <div class="bubble" id="bubble"></div>
+    <div class="crumbs" id="crumbs"></div>
+  </div>
+
+  <main><div class="card" id="card"></div></main>
+
+  <footer>
+    <button class="back" id="back">👈 돌아가기</button>
+    <div class="mode" id="mode"></div>
+  </footer>
+
+<script src="config.js"></script>
+<script src="backend-config.js"></script>
+<script src="js/eddb.js"></script>
+<script>
+(function () {
+  var CFG = window.ED_CONFIG, card = document.getElementById('card');
+  var GRADE_EMOJI = { 1: '🐣', 2: '🐥', 3: '🐰', 4: '🦊', 5: '🐯', 6: '🦁' };
+  var state, idleTimer = null, doneTimer = null;
+
+  document.getElementById('school').textContent = CFG.schoolName;
+  document.getElementById('mode').textContent = '저장: ' + EDDB.modeLabel + ' 모드';
+  function tick() {
+    var d = new Date(), h = d.getHours(), m = d.getMinutes();
+    document.getElementById('clock').textContent = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  }
+  tick(); setInterval(tick, 10000);
+
+  function reset() { state = { step: 'grade', grade: 0, classNo: 0, studentNo: 0, symptom: null }; render(); }
+  function idle() {   // 한참 손대지 않으면 처음으로
+    clearTimeout(idleTimer);
+    if (state.step !== 'grade') idleTimer = setTimeout(reset, CFG.kioskIdleSec * 1000);
+  }
+  document.addEventListener('pointerdown', idle);
+
+  function classCount(grade) {
+    for (var i = 0; i < CFG.grades.length; i++) if (CFG.grades[i].grade === grade) return CFG.grades[i].classes;
+    return 0;
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function opt(html, idx, onTap) {
+    var b = el('button', 'opt c' + (idx % 5));
+    b.innerHTML = html;
+    b.style.animationDelay = Math.min(idx * 18, 400) + 'ms';
+    b.addEventListener('click', onTap);
+    return b;
+  }
+
+  function talk(emoji, text) {
+    document.getElementById('mascot').textContent = emoji;
+    document.getElementById('bubble').textContent = text;
+  }
+  function crumbs() {
+    var c = document.getElementById('crumbs'); c.innerHTML = '';
+    if (state.grade) c.appendChild(el('span', 'crumb', GRADE_EMOJI[state.grade] + ' ' + state.grade + '학년'));
+    if (state.classNo) c.appendChild(el('span', 'crumb', state.classNo + '반'));
+    if (state.studentNo) c.appendChild(el('span', 'crumb', state.studentNo + '번'));
+    if (state.symptom) c.appendChild(el('span', 'crumb', state.symptom.emoji + ' ' + state.symptom.label));
+  }
+
+  function render() {
+    clearTimeout(doneTimer); idle(); crumbs();
+    card.innerHTML = '';
+    document.getElementById('back').style.visibility = (state.step === 'grade' || state.step === 'done') ? 'hidden' : 'visible';
+
+    if (state.step === 'grade') {
+      talk('🧸', '안녕! 몇 학년이에요?');
+      var g = el('div', 'grid g-grade');
+      CFG.grades.forEach(function (x, i) {
+        g.appendChild(opt('<span class="em">' + GRADE_EMOJI[x.grade] + '</span>' + x.grade + '학년', i, function () { state.grade = x.grade; state.step = 'class'; render(); }));
+      });
+      card.appendChild(g);
+
+    } else if (state.step === 'class') {
+      talk(GRADE_EMOJI[state.grade], '몇 반이에요?');
+      var g2 = el('div', 'grid g-class'), n = classCount(state.grade);
+      for (var i = 1; i <= n; i++) (function (no, idx) {
+        g2.appendChild(opt(no + '반', idx, function () { state.classNo = no; state.step = 'number'; render(); }));
+      })(i, i - 1);
+      card.appendChild(g2);
+
+    } else if (state.step === 'number') {
+      talk('🐥', '몇 번이에요?');
+      var g3 = el('div', 'grid g-number');
+      for (var j = 1; j <= CFG.maxStudentNo; j++) (function (no, idx) {
+        g3.appendChild(opt(no + '번', idx, function () { state.studentNo = no; state.step = 'symptom'; render(); }));
+      })(j, j - 1);
+      card.appendChild(g3);
+
+    } else if (state.step === 'symptom') {
+      talk('🩺', '어디가 아파요? 그림을 눌러요!');
+      var g4 = el('div', 'grid g-symptom');
+      CFG.symptoms.forEach(function (sym, i) {
+        g4.appendChild(opt('<span class="em">' + sym.emoji + '</span>' + sym.label, i, function () { state.symptom = sym; state.step = 'confirm'; render(); }));
+      });
+      card.appendChild(g4);
+
+    } else if (state.step === 'confirm') {
+      talk('🧸', '이게 맞아요?');
+      var c = el('div', 'confirm');
+      c.appendChild(el('div', 'who', GRADE_EMOJI[state.grade] + ' ' + state.grade + '학년 ' + state.classNo + '반 ' + state.studentNo + '번'));
+      var w = el('div', 'what'); w.innerHTML = '<span class="em">' + state.symptom.emoji + '</span>' + state.symptom.label;
+      c.appendChild(w);
+      var go = el('button', 'go', '네! 선생님께 알리기 💌');
+      go.addEventListener('click', submit);
+      c.appendChild(go);
+      card.appendChild(c);
+
+    } else if (state.step === 'done') {
+      talk('💖', '선생님께 알렸어요!');
+      var d = el('div', 'done');
+      d.appendChild(el('div', 'big', '💌'));
+      d.appendChild(el('h2', null, '잘했어요!'));
+      d.appendChild(el('p', null, state.waitMsg || '선생님이 곧 봐줄 거예요. 조금만 기다려요!'));
+      ['💖', '⭐', '🌼', '🩹', '💛'].forEach(function (e2, i) {
+        var s = el('span', 'confetti', e2);
+        s.style.left = (18 + i * 16) + '%'; s.style.bottom = '20%'; s.style.animationDelay = (i * 0.12) + 's';
+        d.appendChild(s);
+      });
+      card.appendChild(d);
+      doneTimer = setTimeout(reset, 5000);
+
+    } else if (state.step === 'error') {
+      talk('😢', '앗, 잘 안 됐어요');
+      var e3 = el('div', 'done');
+      e3.appendChild(el('div', 'big', '🙏'));
+      e3.appendChild(el('h2', null, '잘 안 됐어요'));
+      e3.appendChild(el('p', null, '선생님께 직접 말해 주세요.'));
+      card.appendChild(e3);
+      doneTimer = setTimeout(reset, 5000);
+    }
+  }
+
+  document.getElementById('back').addEventListener('click', function () {
+    var order = ['grade', 'class', 'number', 'symptom', 'confirm'];
+    var i = order.indexOf(state.step);
+    if (i > 0) { state.step = order[i - 1]; render(); }
+  });
+
+  function submit() {
+    var day = EDDB.dayString();
+    var visit = {
+      day: day, grade: state.grade, classNo: state.classNo, studentNo: state.studentNo,
+      name: '', symptom: state.symptom.code, tsIn: Date.now(), tsOut: null,
+      status: 'waiting', treat: [], temp: '', med: '', note: '', outcome: '',
+    };
+    EDDB.fetchDay(day).then(function (list) {
+      var waiting = 0;
+      for (var i = 0; i < list.length; i++) if (list[i].status === 'waiting') waiting++;
+      return EDDB.add(visit).then(function () {
+        state.step = 'done';
+        state.waitMsg = waiting > 0 ? '친구 ' + waiting + '명이 먼저 왔어요. 조금만 기다려요!' : '선생님이 곧 봐줄 거예요. 조금만 기다려요!';
+        render();
+      });
+    }).catch(function () { state.step = 'error'; render(); });
+  }
+
+  reset();
+})();
+</script>
+</body>
+</html>

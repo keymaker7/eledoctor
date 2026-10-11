@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>엘레닥터 · 보건교사</title>
+<style>
+  :root {
+    --teal: #1fa98f; --teal-dark: #15806c; --ink: #1d3a35; --sub: #5b7a73;
+    --bg: #f2f7f6; --card: #fff; --line: #e3edea;
+    --wait: #f5a623; --care: #3f8cff; --done: #28a06c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+  header { display: flex; align-items: center; gap: 18px; padding: 14px 22px; background: #fff; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header h1 { font-size: 20px; letter-spacing: -0.5px; }
+  header h1 small { color: var(--sub); font-weight: 600; font-size: 13px; margin-left: 8px; }
+  header .spacer { flex: 1; }
+  header .stat { font-size: 14px; color: var(--sub); font-weight: 700; }
+  header .stat b { color: var(--teal-dark); font-size: 17px; }
+  .mode { font-size: 12px; color: #9ab3ac; font-weight: 600; }
+
+  nav.tabs { display: flex; gap: 6px; padding: 10px 22px 0; }
+  nav.tabs button {
+    font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+    border: 1px solid var(--line); border-bottom: none; background: #e9f1ef; color: var(--sub);
+    padding: 10px 22px; border-radius: 12px 12px 0 0;
+  }
+  nav.tabs button.on { background: #fff; color: var(--teal-dark); }
+
+  main { padding: 0 22px 26px; }
+  section.pane { display: none; background: #fff; border: 1px solid var(--line); border-radius: 0 14px 14px 14px; padding: 18px; min-height: 60vh; }
+  section.pane.on { display: block; }
+
+  /* ---- 진료 현황 ---- */
+  .board { display: grid; grid-template-columns: 380px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 900px) { .board { grid-template-columns: 1fr; } }
+  .queue h2, .detail h2 { font-size: 15px; color: var(--sub); margin-bottom: 10px; }
+  .vcard {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    font-family: inherit; cursor: pointer; background: #fbfdfc; border: 2px solid var(--line);
+    border-radius: 14px; padding: 12px 14px; margin-bottom: 10px;
+  }
+  .vcard.sel { border-color: var(--teal); background: #eefaf6; }
+  .vcard .em { font-size: 30px; }
+  .vcard .who { font-weight: 800; font-size: 16px; }
+  .vcard .sym { color: var(--sub); font-size: 13px; font-weight: 600; }
+  .vcard .right { margin-left: auto; text-align: right; }
+  .vcard .time { font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .chip { display: inline-block; font-size: 12px; font-weight: 800; color: #fff; border-radius: 999px; padding: 3px 10px; }
+  .chip.waiting { background: var(--wait); } .chip.care { background: var(--care); } .chip.done { background: var(--done); }
+  .empty { color: #9ab3ac; font-weight: 600; padding: 30px 0; text-align: center; }
+
+  .detail { background: #fbfdfc; border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .detail .head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .detail .head .who { font-size: 21px; font-weight: 800; }
+  .detail .head .sym { font-size: 16px; color: var(--teal-dark); font-weight: 700; }
+  .frow { margin-bottom: 14px; }
+  .frow label.t { display: block; font-size: 13px; font-weight: 800; color: var(--sub); margin-bottom: 6px; }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px; }
+  .checks label {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700;
+    background: #fff; border: 1.5px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer;
+  }
+  .checks label.on { border-color: var(--teal); background: #eefaf6; color: var(--teal-dark); }
+  .checks input { accent-color: var(--teal); }
+  input[type=text], textarea, select, input[type=date] {
+    font-family: inherit; font-size: 15px; border: 1.5px solid var(--line); border-radius: 10px;
+    padding: 9px 12px; background: #fff; color: var(--ink); width: 100%;
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .btn {
+    font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer;
+    border: none; border-radius: 10px; padding: 11px 20px; color: #fff; background: var(--teal);
+  }
+  .btn.blue { background: var(--care); } .btn.gray { background: #8aa39c; }
+  .btn:active { transform: scale(.97); }
+  .saved { font-size: 13px; color: var(--done); font-weight: 800; align-self: center; }
+
+  /* ---- 보건일지 / 통계 ---- */
+  .bar-tools { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .bar-tools input[type=date] { width: auto; }
+  table.journal { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.journal th, table.journal td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; }
+  table.journal th { background: #eef5f3; font-size: 13px; color: var(--sub); white-space: nowrap; }
+  table.journal td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 900px) { .stats { grid-template-columns: 1fr; } }
+  .stats h3 { font-size: 15px; color: var(--sub); margin-bottom: 12px; }
+  .bar { display: grid; grid-template-columns: 130px 1fr 36px; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 14px; font-weight: 700; }
+  .bar .track { background: #edf3f1; border-radius: 999px; height: 18px; overflow: hidden; }
+  .bar .fill { display: block; background: var(--teal); height: 100%; border-radius: 999px; min-width: 4px; }
+  .bar .n { text-align: right; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .bigcount { font-size: 42px; font-weight: 800; color: var(--teal-dark); margin-bottom: 4px; }
+  .bigcount small { font-size: 15px; color: var(--sub); font-weight: 700; margin-left: 6px; }
+
+  /* ---- PIN 잠금 ---- */
+  #lock { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 50; }
+  #lock .box { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 34px 40px; text-align: center; }
+  #lock input { font-size: 24px; text-align: center; letter-spacing: 8px; width: 180px; margin: 14px 0; }
+
+  /* ---- 인쇄: 보건일지 표만 ---- */
+  #printHead { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { position: absolute; left: 0; top: 0; width: 100%; }
+    #printHead { display: block; font-size: 18px; margin-bottom: 12px; }
+    section.pane { border: none; }
+  }
+</style>
+</head>
+<body>
+  <div id="lock" style="display:none">
+    <div class="box">
+      <div style="font-size:34px">🔒</div>
+      <div style="font-weight:800;margin-top:8px">보건교사 화면</div>
+      <input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN">
+      <div><button class="btn" id="pinGo">열기</button></div>
+    </div>
+  </div>
+
+  <header>
+    <h1>🩺 엘레닥터 · 보건교사<small id="school"></small></h1>
+    <div class="spacer"></div>
+    <div class="stat">오늘 방문 <b id="cntTotal">0</b>명</div>
+    <div class="stat">대기 <b id="cntWait">0</b>명</div>
+    <div class="mode" id="mode"></div>
+  </header>
+
+  <nav class="tabs">
+    <button class="on" data-tab="board">진료 현황</button>
+    <button data-tab="journal">보건일지</button>
+    <button data-tab="stats">통계</button>
+  </nav>
+
+  <main>
+    <!-- 진료 현황 -->
+    <section class="pane on" id="pane-board">
+      <div class="board">
+        <div class="queue">
+          <h2>대기 · 처치 중</h2>
+          <div id="queueList"></div>
+          <h2 style="margin-top:18px">오늘 퇴실</h2>
+          <div id="doneList"></div>
+        </div>
+        <div class="detail" id="detail"><div class="empty">왼쪽 목록에서 학생을 선택하세요.</div></div>
+      </div>
+    </section>
+
+    <!-- 보건일지 -->
+    <section class="pane" id="pane-journal">
+      <div class="bar-tools">
+        <input type="date" id="jDate">
+        <button class="btn gray" id="btnPrint">🖨 인쇄</button>
+        <button class="btn gray" id="btnCsv">⬇ CSV 저장</button>
+        <span class="stat" id="jCount"></span>
+      </div>
+      <div id="printArea">
+        <div id="printHead"></div>
+        <table class="journal">
+          <thead><tr>
+            <th>입실</th><th>퇴실</th><th>학년·반·번호</th><th>이름</th><th>증상</th>
+            <th>처치</th><th>체온</th><th>투약</th><th>조치 결과</th><th>메모</th>
+          </tr></thead>
+          <tbody id="jBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 통계 -->
+    <section class="pane" id="pane-stats">
+      <div class="bar-tools"><input type="date" id="sDate"><span class="stat">※ 선택한 날짜 기준</span></div>
+      <div class="bigcount" id="sTotal"></div>
+      <div class="stats">
+        <div><h3>증상별</h3><div id="sSym"></div></div>
+        <div><h3>학년별</h3><div id="sGrade"></div></div>
+      </div>
+    </section>
+  </main>
+
+<script src="config.js"></script>
+<script src="backend-config.js"></script>
+<script src="js/eddb.js"></script>
+<script>
+(function () {
+  var CFG = window.ED_CONFIG;
+  var SYM = {}; CFG.symptoms.forEach(function (s) { SYM[s.code] = s; });
+  function symEmoji(c) { return SYM[c] ? SYM[c].emoji : '💬'; }
+  function symLabel(c) { return SYM[c] ? SYM[c].label : c; }
+  function who(v) { return v.grade + '-' + v.classNo + ' ' + v.studentNo + '번' + (v.name ? ' ' + v.name : ''); }
+  var STATUS = { waiting: '대기', care: '처치 중', done: '퇴실' };
+
+  document.getElementById('school').textContent = CFG.schoolName;
+  document.getElementById('mode').textContent = '저장: ' + EDDB.modeLabel + ' 모드';
+
+  // ---- PIN 잠금 (config.js 의 nursePin 이 비어 있으면 건너뜀) ----
+  if (CFG.nursePin && sessionStorage.getItem('ed-unlocked') !== '1') {
+    var lock = document.getElementById('lock'); lock.style.display = 'flex';
+    function tryPin() {
+      if (document.getElementById('pin').value === CFG.nursePin) { sessionStorage.setItem('ed-unlocked', '1'); lock.style.display = 'none'; }
+      else { document.getElementById('pin').value = ''; document.getElementById('pin').placeholder = '다시 입력'; }
+    }
+    document.getElementById('pinGo').addEventListener('click', tryPin);
+    document.getElementById('pin').addEventListener('keydown', function (e) { if (e.key === 'Enter') tryPin(); });
+  }
+
+  // ---- 탭 ----
+  var tabs = document.querySelectorAll('nav.tabs button');
+  tabs.forEach(function (b) {
+    b.addEventListener('click', function () {
+      tabs.forEach(function (x) { x.classList.remove('on'); });
+      document.querySelectorAll('section.pane').forEach(function (p) { p.classList.remove('on'); });
+      b.classList.add('on');
+      document.getElementById('pane-' + b.dataset.tab).classList.add('on');
+      if (b.dataset.tab === 'journal') loadJournal();
+      if (b.dataset.tab === 'stats') loadStats();
+    });
+  });
+
+  // ---- 오늘 데이터 ----
+  var today = EDDB.dayString(), visits = [], selectedKey = null;
+  function refresh() {
+    EDDB.fetchDay(today).then(function (list) {
+      visits = list;
+      document.getElementById('cntTotal').textContent = list.length;
+      var w = 0; list.forEach(function (v) { if (v.status === 'waiting') w++; });
+      document.getElementById('cntWait').textContent = w;
+      renderQueue();
+      if (document.getElementById('pane-journal').classList.contains('on') && document.getElementById('jDate').value === today) loadJournal();
+      if (document.getElementById('pane-stats').classList.contains('on') && document.getElementById('sDate').value === today) loadStats();
+    });
+  }
+  EDDB.subscribe(today, refresh);
+  refresh();
+
+  // ---- 대기열 ----
+  function vcard(v) {
+    var b = document.createElement('button');
+    b.className = 'vcard' + (v.key === selectedKey ? ' sel' : '');
+    b.innerHTML = '<span class="em">' + symEmoji(v.symptom) + '</span>' +
+      '<span><span class="who">' + who(v) + '</span><br><span class="sym">' + symLabel(v.symptom) + '</span></span>' +
+      '<span class="right"><span class="chip ' + v.status + '">' + STATUS[v.status] + '</span><br>' +
+      '<span class="time">' + EDDB.timeString(v.tsIn) + (v.tsOut ? '~' + EDDB.timeString(v.tsOut) : '') + '</span></span>';
+    b.addEventListener('click', function () { select(v.key); });
+    return b;
+  }
+  function renderQueue() {
+    var q = document.getElementById('queueList'), d = document.getElementById('doneList');
+    q.innerHTML = ''; d.innerHTML = '';
+    var active = visits.filter(function (v) { return v.status !== 'done'; });
+    var done = visits.filter(function (v) { return v.status === 'done'; });
+    if (!active.length) q.innerHTML = '<div class="empty">기다리는 학생이 없어요 😊</div>';
+    active.forEach(function (v) { q.appendChild(vcard(v)); });
+    if (!done.length) d.innerHTML = '<div class="empty">아직 없음</div>';
+    done.slice().reverse().forEach(function (v) { d.appendChild(vcard(v)); });
+    // 선택한 학생의 상태 칩만 최신으로 (입력 중인 폼은 건드리지 않음)
+    var cur = findVisit(selectedKey);
+    if (cur) { var chip = document.getElementById('dChip'); if (chip) { chip.className = 'chip ' + cur.status; chip.textContent = STATUS[cur.status]; } }
+    else if (selectedKey) { selectedKey = null; renderDetail(null); }
+  }
+  function findVisit(key) { for (var i = 0; i < visits.length; i++) if (visits[i].key === key) return visits[i]; return null; }
+  function select(key) { selectedKey = key; renderQueue(); renderDetail(findVisit(key)); }
+
+  // ---- 처치 입력 ----
+  function renderDetail(v) {
+    var d = document.getElementById('detail');
+    if (!v) { d.innerHTML = '<div class="empty">왼쪽 목록에서 학생을 선택하세요.</div>'; return; }
+    var html =
+      '<div class="head"><span style="font-size:32px">' + symEmoji(v.symptom) + '</span>' +
+      '<span class="who">' + v.grade + '학년 ' + v.classNo + '반 ' + v.studentNo + '번</span>' +
+      '<span class="sym">' + symLabel(v.symptom) + '</span>' +
+      '<span class="chip ' + v.status + '" id="dChip">' + STATUS[v.status] + '</span>' +
+      '<span class="time" style="color:var(--sub);font-size:13px">입실 ' + EDDB.timeString(v.tsIn) + '</span></div>' +
+      '<div class="two frow"><div><label class="t">이름 (선택)</label><input type="text" id="fName" maxlength="20"></div>' +
+      '<div><label class="t">체온</label><input type="text" id="fTemp" maxlength="10" placeholder="예: 37.2℃"></div></div>' +
+      '<div class="frow"><label class="t">처치</label><div class="checks" id="fTreat"></div></div>' +
+      '<div class="frow"><label class="t">투약 (약 이름·용량)</label><input type="text" id="fMed" maxlength="100" placeholder="예: 어린이 타이레놀 1정"></div>' +
+      '<div class="frow"><label class="t">메모</label><textarea id="fNote" maxlength="500"></textarea></div>' +
+      '<div class="frow"><label class="t">조치 결과</label><select id="fOutcome"><option value="">(선택)</option></select></div>' +
+      '<div class="actions">' +
+      (v.status === 'waiting' ? '<button class="btn blue" id="btnCare">처치 시작</button>' : '') +
+      '<button class="btn gray" id="btnSave">저장</button>' +
+      (v.status !== 'done' ? '<button class="btn" id="btnOut">퇴실 처리</button>' : '') +
+      '<span class="saved" id="savedMsg"></span></div>';
+    d.innerHTML = html;
+
+    document.getElementById('fName').value = v.name || '';
+    document.getElementById('fTemp').value = v.temp || '';
+    document.getElementById('fMed').value = v.med || '';
+    document.getElementById('fNote').value = v.note || '';
+    var sel = document.getElementById('fOutcome');
+    CFG.outcomes.forEach(function (o) { var op = document.createElement('option'); op.value = o; op.textContent = o; sel.appendChild(op); });
+    sel.value = v.outcome || '';
+    var tr = document.getElementById('fTreat');
+    CFG.treatments.forEach(function (t) {
+      var lab = document.createElement('label'), cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.value = t; cb.checked = (v.treat || []).indexOf(t) >= 0;
+      if (cb.checked) lab.classList.add('on');
+      cb.addEventListener('change', function () { lab.classList.toggle('on', cb.checked); });
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(t));
+      tr.appendChild(lab);
+    });
+
+    function formPatch() {
+      var treat = [];
+      tr.querySelectorAll('input:checked').forEach(function (c) { treat.push(c.value); });
+      return {
+        name: document.getElementById('fName').value.trim(),
+        temp: document.getElementById('fTemp').value.trim(),
+        med: document.getElementById('fMed').value.trim(),
+        note: document.getElementById('fNote').value.trim(),
+        outcome: sel.value, treat: treat,
+      };
+    }
+    function save(extra, msg) {
+      var p = formPatch();
+      if (extra) for (var k in extra) p[k] = extra[k];
+      EDDB.update(today, v.key, p).then(function () {
+        document.getElementById('savedMsg').textContent = msg || '저장됨 ✓';
+        setTimeout(function () { var m = document.getElementById('savedMsg'); if (m) m.textContent = ''; }, 2000);
+        refresh();
+        if (extra && extra.status) { var nv = findVisit(v.key); if (nv) { for (var k2 in p) nv[k2] = p[k2]; renderDetail(nv); } }
+      });
+    }
+    var bc = document.getElementById('btnCare'); if (bc) bc.addEventListener('click', function () { save({ status: 'care' }, '처치 시작 ✓'); });
+    document.getElementById('btnSave').addEventListener('click', function () { save(null); });
+    var bo = document.getElementById('btnOut');
+    if (bo) bo.addEventListener('click', function () {
+      if (!sel.value) sel.value = CFG.outcomes[0];   // 결과를 안 고르면 '교실 복귀'로
+      save({ status: 'done', tsOut: Date.now() }, '퇴실 처리 ✓');
+    });
+  }
+
+  // ---- 보건일지 ----
+  var jDate = document.getElementById('jDate'); jDate.value = today;
+  jDate.addEventListener('change', loadJournal);
+  var journalCache = [];
+  function loadJournal() {
+    EDDB.fetchDay(jDate.value).then(function (list) {
+      journalCache = list;
+      document.getElementById('jCount').textContent = list.length + '건';
+      document.getElementById('printHead').textContent = CFG.schoolName + ' 보건일지 — ' + jDate.value;
+      var tb = document.getElementById('jBody'); tb.innerHTML = '';
+      if (!list.length) tb.innerHTML = '<tr><td colspan="10" class="empty">기록이 없습니다.</td></tr>';
+      list.forEach(function (v) {
+        var tr = document.createElement('tr');
+        function td(text, cls) { var c = document.createElement('td'); if (cls) c.className = cls; c.textContent = text; tr.appendChild(c); }
+        td(EDDB.timeString(v.tsIn), 'num');
+        td(v.tsOut ? EDDB.timeString(v.tsOut) : (v.status === 'done' ? '' : STATUS[v.status]), 'num');
+        td(v.grade + '-' + v.classNo + ' ' + v.studentNo + '번', 'num');
+        td(v.name || ''); td(symLabel(v.symptom)); td((v.treat || []).join(', '));
+        td(v.temp || ''); td(v.med || ''); td(v.outcome || ''); td(v.note || '');
+        tb.appendChild(tr);
+      });
+    });
+  }
+  document.getElementById('btnPrint').addEventListener('click', function () { window.print(); });
+  document.getElementById('btnCsv').addEventListener('click', function () {
+    var rows = [['날짜', '입실', '퇴실', '학년', '반', '번호', '이름', '증상', '처치', '체온', '투약', '조치 결과', '메모']];
+    journalCache.forEach(function (v) {
+      rows.push([v.day, EDDB.timeString(v.tsIn), v.tsOut ? EDDB.timeString(v.tsOut) : '', v.grade, v.classNo, v.studentNo,
+        v.name || '', symLabel(v.symptom), (v.treat || []).join(' · '), v.temp || '', v.med || '', v.outcome || '', v.note || '']);
+    });
+    var csv = '﻿' + rows.map(function (r) {
+      return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\r\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = '보건일지-' + jDate.value + '.csv';
+    a.click(); URL.revokeObjectURL(a.href);
+  });
+
+  // ---- 통계 ----
+  var sDate = document.getElementById('sDate'); sDate.value = today;
+  sDate.addEventListener('change', loadStats);
+  function bars(elId, counts, labelOf) {
+    var box = document.getElementById(elId); box.innerHTML = '';
+    var keys = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
+    var max = 0; keys.forEach(function (k) { if (counts[k] > max) max = counts[k]; });
+    if (!keys.length) { box.innerHTML = '<div class="empty">기록 없음</div>'; return; }
+    keys.forEach(function (k) {
+      var row = document.createElement('div'); row.className = 'bar';
+      row.innerHTML = '<span>' + labelOf(k) + '</span><span class="track"><span class="fill" style="width:' +
+        Math.round(counts[k] / max * 100) + '%"></span></span><span class="n">' + counts[k] + '</span>';
+      box.appendChild(row);
+    });
+  }
+  function loadStats() {
+    EDDB.fetchDay(sDate.value).then(function (list) {
+      document.getElementById('sTotal').innerHTML = list.length + '<small>' + sDate.value + ' 방문</small>';
+      var bySym = {}, byGrade = {};
+      list.forEach(function (v) {
+        bySym[v.symptom] = (bySym[v.symptom] || 0) + 1;
+        byGrade[v.grade] = (byGrade[v.grade] || 0) + 1;
+      });
+      bars('sSym', bySym, function (k) { return symEmoji(k) + ' ' + symLabel(k); });
+      bars('sGrade', byGrade, function (k) { return k + '학년'; });
+    });
+  }
+})();
+</script>
+</body>
+</html>

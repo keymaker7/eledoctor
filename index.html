@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>엘레닥터 · 보건실 도우미</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root { --teal: #1fa98f; --teal-dark: #15806c; --ink: #1d3a35; --sub: #5b7a73; --line: #e3edea; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Jua", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    background: linear-gradient(160deg, #fff6e9 0%, #ffeef3 50%, #e9f6ff 100%);
+    color: var(--ink); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .wrap { max-width: 760px; width: 100%; text-align: center; }
+  h1 { font-size: 34px; letter-spacing: -1px; }
+  .sub { color: var(--sub); font-weight: 600; margin: 10px 0 30px; font-size: 16px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 640px) { .cards { grid-template-columns: 1fr; } }
+  a.card {
+    display: block; background: #fff; border-radius: 20px; padding: 26px 18px; text-decoration: none; color: var(--ink);
+    box-shadow: 0 8px 26px rgba(29,58,53,.1); transition: transform .08s;
+  }
+  a.card:hover { transform: translateY(-3px); }
+  a.card .em { font-size: 44px; }
+  a.card h2 { font-size: 19px; margin: 10px 0 6px; }
+  a.card p { font-size: 13px; color: var(--sub); font-weight: 600; line-height: 1.5; }
+  .mode { margin-top: 26px; font-size: 13px; color: #8aa39c; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏥 엘레닥터</h1>
+  <div class="sub" id="school">초등 보건실 도우미 — 접수부터 보건일지까지</div>
+  <div class="cards">
+    <a class="card" href="kiosk.html">
+      <div class="em">🙋</div><h2>학생 접수 키오스크</h2>
+      <p>보건실 입구 태블릿용.<br>학년·반·번호·증상을 그림으로 골라요.</p>
+    </a>
+    <a class="card" href="nurse.html">
+      <div class="em">🩺</div><h2>보건교사</h2>
+      <p>대기열·처치 기록·퇴실 처리,<br>보건일지 인쇄·CSV·통계.</p>
+    </a>
+    <a class="card" href="teacher.html">
+      <div class="em">📋</div><h2>담임교사</h2>
+      <p>우리 반 학생이 보건실에 오면<br>교실에서 바로 확인해요.</p>
+    </a>
+  </div>
+  <div class="mode" id="mode"></div>
+</div>
+<script src="config.js"></script>
+<script src="backend-config.js"></script>
+<script src="js/eddb.js"></script>
+<script>
+  document.getElementById('school').textContent = window.ED_CONFIG.schoolName + ' 보건실 도우미 — 접수부터 보건일지까지';
+  document.getElementById('mode').textContent = '저장: ' + EDDB.modeLabel + ' 모드 · 기록은 학교 밖으로 나가지 않습니다 (README.md 참고)';
+</script>
+</body>
+</html>

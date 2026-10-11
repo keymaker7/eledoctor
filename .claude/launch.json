@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "eledoctor",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["C:/Users/user/Downloads/Eledoctor/tools/eledoctor-server.py", "8767", "--local-only"],
+      "port": 8767
+    }
+  ]
+}
